@@ -1,0 +1,57 @@
+---
+title: "MachLearn_Project1"
+author: "Rosa Colom"
+date: "August 24, 2014"
+output: html_document
+---
+
+First of all, we will have to load the data and the necessary libraries.
+
+```{r}
+library(caret)
+library(randomForest)
+raw.train<- read.csv("pml-training.csv", row.names = 1, as.is=TRUE, na.strings=c('', NA))
+```
+
+We have 19622 obsevations of 159 variables. The data is too large and it is obvious that not all information will be necessary to build some kind of prediction.
+
+We have to start pre-processing the data.
+
+```{r}
+raw.train$classe <- factor(raw.train$classe)
+raw.train<-data.frame(raw.train)
+```
+
+It will have to be splitted into a training set and a test set.
+
+```{r}
+p<-0.6
+Train <- createDataPartition(raw.train$classe, p=p, list=FALSE)
+trainset <- raw.train[Train, ]
+testset <- raw.train[-Train, ]
+```
+
+All columns with NAs, invalid values or invalid information will have to be removed. We will also have to delete correlated information as it won't add anything new to the analysis.
+
+
+```{r}
+dropcol <- round(apply(trainset, 2, function(x) {return(sum(is.na(x)/dim(trainset)[1]))}), 0) == 1.0
+trainset <- trainset[, !dropcol]
+dropcol <- c("user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", "new_window", "num_window", "cvtd_timestamp")
+trainset <- trainset[,!(names(trainset) %in% dropcol)]
+highcor <- findCorrelation(cor(trainset[, 1:52]), cutoff=0.6)
+trainset <- trainset[, -highcor]
+```
+
+Now we will perform the randomForest process.
+
+```{r}
+modFit <- randomForest(classe ~ ., data = trainset)
+```
+
+As we can see below, the results are not bad.
+
+```{r}
+modFit
+```
+
